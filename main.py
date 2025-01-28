@@ -189,7 +189,8 @@ def plot_temperature_graph(data):
         st.error(f"Error plotting the temperature graph: {e}")
 
 
-st.title("Weather Forecasting with LLM")
+st.set_page_config(page_title="MeteoMind",page_icon="icon.png")
+st.title("MeteoMind")
 city = st.text_input("Enter city name", "London")
 record_audio=audio_recorder()
 
