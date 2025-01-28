@@ -1,5 +1,4 @@
 import streamlit as st
-from dotenv import load_dotenv
 import requests
 import os
 from datetime import datetime  
@@ -9,12 +8,11 @@ from audio_recorder_streamlit import audio_recorder
 from gtts import gTTS
 import speech_recognition as sr 
 
+st.set_page_config(page_title="MeteoMind",page_icon="icon.png")
 
-load_dotenv()
-
-
-gemini_api_key = os.getenv("GEMINI_API_KEY")
-weather_api_key = os.getenv("WEATHER_API_KEY")
+with st.sidebar:
+    gemini_api_key=st.text_input("Enter Gemini Api Key")
+    weather_api_key=st.text_input("Enter OpenWeather Api Key")
 
 def recognize_speech():
     recognizer = sr.Recognizer()
@@ -187,91 +185,67 @@ def plot_temperature_graph(data):
         st.pyplot(plt)
     except Exception as e:
         st.error(f"Error plotting the temperature graph: {e}")
+        
+def all_process(city,weather_api_key,choice="text"):
+    st.title(f"Weather Updates for {city}")
+    with st.spinner("Fetching weather data..."):
+        weather_data = get_weather_data(city, weather_api_key)
+
+    if weather_data.get("cod") != "404":
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.metric("Temperature 🌡️", f"{weather_data['main']['temp'] - 273.15:.2f} °C")
+            st.metric("Humidity 💧", f"{weather_data['main']['humidity']}%")
+
+        with col2:
+            st.metric("Pressure", f"{weather_data['main']['pressure']} hPa")
+            st.metric("Wind Speed 🍃", f"{weather_data['wind']['speed']} m/s")
+
+        lat = weather_data["coord"]["lat"]
+        lon = weather_data["coord"]["lon"]
+
+        weather_description,icon_url = generate_weather_description_with_icon(weather_data)
+        st.subheader("Weather Description")
+        if choice == "audio":
+            st.write(weather_description)
+            play_response_text(weather_description)
+        else:
+            st.write(weather_description)
+        
+        st.subheader("City Location on Map")
+        map_data = {
+            "lat": [lat],
+            "lon": [lon],
+        }
+        st.map(map_data)
+
+        forecast_data = get_weekly_forecast(weather_api_key, lat, lon)
+        if forecast_data.get("cod") != "404":
+            display_weekly_forecast(forecast_data,icon_url)
+            st.subheader("Temperature Graph")
+            plot_temperature_graph(forecast_data)
+        else:
+            st.error("Error fetching weekly forecast data!")
+    else:
+        st.error(f"City '{city}' not found. Please check the spelling and try again.")
 
 
-st.set_page_config(page_title="MeteoMind",page_icon="icon.png")
 st.title("MeteoMind")
 city = st.text_input("Enter city name", "London")
 record_audio=audio_recorder()
 
 if st.button("Get Weather"):
-    st.title(f"Weather Updates for {city}")
-    with st.spinner("Fetching weather data..."):
-        weather_data = get_weather_data(city, weather_api_key)
-
-    if weather_data.get("cod") != "404":
-        col1, col2 = st.columns(2)
-
-        with col1:
-            st.metric("Temperature 🌡️", f"{weather_data['main']['temp'] - 273.15:.2f} °C")
-            st.metric("Humidity 💧", f"{weather_data['main']['humidity']}%")
-
-        with col2:
-            st.metric("Pressure", f"{weather_data['main']['pressure']} hPa")
-            st.metric("Wind Speed 🍃", f"{weather_data['wind']['speed']} m/s")
-
-        lat = weather_data["coord"]["lat"]
-        lon = weather_data["coord"]["lon"]
-
-        weather_description,icon_url = generate_weather_description_with_icon(weather_data)
-        st.subheader("Weather Description")
-        st.write(weather_description)
+    try:
+        all_process(city,weather_api_key,choice="text")
+    except Exception as e :
+        st.write(f"Error found {e}")
         
-        st.subheader("City Location on Map")
-        map_data = {
-            "lat": [lat],
-            "lon": [lon],
-        }
-        st.map(map_data)
-
-        forecast_data = get_weekly_forecast(weather_api_key, lat, lon)
-        if forecast_data.get("cod") != "404":
-            display_weekly_forecast(forecast_data,icon_url)
-            st.subheader("Temperature Graph")
-            plot_temperature_graph(forecast_data)
-        else:
-            st.error("Error fetching weekly forecast data!")
-    else:
-        st.error(f"City '{city}' not found. Please check the spelling and try again.")
         
 elif record_audio:
     city=recognize_speech()
-    st.title(f"Weather Updates for {city}")
-    with st.spinner("Fetching weather data..."):
-        weather_data = get_weather_data(city, weather_api_key)
-
-    if weather_data.get("cod") != "404":
-        col1, col2 = st.columns(2)
-
-        with col1:
-            st.metric("Temperature 🌡️", f"{weather_data['main']['temp'] - 273.15:.2f} °C")
-            st.metric("Humidity 💧", f"{weather_data['main']['humidity']}%")
-
-        with col2:
-            st.metric("Pressure", f"{weather_data['main']['pressure']} hPa")
-            st.metric("Wind Speed 🍃", f"{weather_data['wind']['speed']} m/s")
-
-        lat = weather_data["coord"]["lat"]
-        lon = weather_data["coord"]["lon"]
-
-        weather_description,icon_url = generate_weather_description_with_icon(weather_data)
-        st.subheader("Weather Description")
-        st.write(weather_description)
-        play_response_text(weather_description)
-        st.subheader("City Location on Map")
-        map_data = {
-            "lat": [lat],
-            "lon": [lon],
-        }
-        st.map(map_data)
-
-        forecast_data = get_weekly_forecast(weather_api_key, lat, lon)
-        if forecast_data.get("cod") != "404":
-            display_weekly_forecast(forecast_data,icon_url)
-            st.subheader("Temperature Graph")
-            plot_temperature_graph(forecast_data)
-        else:
-            st.error("Error fetching weekly forecast data!")
-    else:
-        st.error(f"City '{city}' not found. Please check the spelling and try again.")
+    try:
+        all_process(city,weather_api_key,choice="audio")
+    except Exception as e :
+        st.write(f"Error found {e}")
 
