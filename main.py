@@ -8,7 +8,7 @@ from audio_recorder_streamlit import audio_recorder
 from gtts import gTTS
 import speech_recognition as sr 
 
-st.set_page_config(page_title="MeteoMind",page_icon="icon.png")
+st.set_page_config(page_title="WeatherWise",page_icon="icon.png")
 
 with st.sidebar:
     gemini_api_key=st.text_input("Enter Gemini Api Key")
@@ -231,8 +231,8 @@ def all_process(city,weather_api_key,choice="text"):
         st.error(f"City '{city}' not found. Please check the spelling and try again.")
 
 
-st.title("MeteoMind")
-city = st.text_input("Enter city name", "London")
+st.title("WeatherWise")
+city = st.text_input("Enter city name")
 record_audio=audio_recorder()
 
 if st.button("Get Weather"):
